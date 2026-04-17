@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>DELTA SUPREME</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Roboto:wght@400;700&display=swap');
+        :root { --cyan: #00f2ff; --gold: #ffcc00; --red: #ff3131; --bg: #0b0b0e; }
+        * { box-sizing: border-box; font-family: 'Roboto', sans-serif; outline: none; }
+        body { background: var(--bg); color: #fff; margin: 0; padding: 10px; text-align: center; }
+        .orb { font-family: 'Orbitron', sans-serif; }
+        .box { max-width: 450px; margin: auto; border: 2px solid var(--red); border-radius: 20px; padding: 15px; background: #000; box-shadow: 0 0 20px rgba(255,49,49,0.3); margin-bottom: 15px; }
+        input, select { width: 90%; padding: 12px; margin: 5px 0; border-radius: 10px; border: 1px solid #333; background: #111; color: #fff; text-align: center; }
+        button { border: none; padding: 12px; border-radius: 10px; font-weight: 900; cursor: pointer; width: 100%; }
+        .btn-t { background: var(--red); color: #fff; }
+        .btn-x { background: var(--cyan); color: #000; }
+        .btn-gold { background: var(--gold); color: #000; }
+        .page { display: none; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #chat-area { height: 180px; overflow-y: auto; background: #1e1e24; border: 1px solid #333; border-radius: 15px; padding: 12px; text-align: left; font-size: 13px; margin-bottom: 10px; box-shadow: inset 0 0 10px #000; }
+        .chat-msg { margin-bottom: 6px; border-bottom: 1px solid #2a2a2f; padding-bottom: 3px; }
+        .chat-u { color: var(--cyan); font-weight: bold; text-shadow: 0 0 5px rgba(0,242,255,0.3); }
+        .chat-m { color: #fff; margin-left: 5px; }
+        #adm-panel { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; padding: 15px; overflow-y: auto; text-align: left; }
+        .adm-card { background: #111; padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #222; font-size: 12px; }
+        .adm-title { color: var(--gold); font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #333; display: block; text-transform: uppercase; }
+        .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #222; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <div id="login-page" class="page" style="display:block; margin-top:60px;">
+        <h1 class="orb" style="color:var(--red); font-size:40px;">DELTA</h1>
+        <div class="box" style="border:none;">
+            <input type="text" id="l-u" placeholder="Tên tài khoản">
+            <input type="password" id="l-p" placeholder="Mật khẩu">
+            <button class="btn-t" onclick="auth('login')">ĐĂNG NHẬP</button>
+            <p style="font-size:13px; margin-top:20px;">Chưa có tài khoản? <span onclick="showPage('reg-page')" style="color:var(--cyan); cursor:pointer">Đăng ký</span></p>
+        </div>
+    </div>
+
+    <div id="reg-page" class="page" style="margin-top:60px;">
+        <h1 class="orb" style="color:var(--cyan); font-size:40px;">JOIN</h1>
+        <div class="box" style="border-color:var(--cyan)">
+            <input type="text" id="r-u" placeholder="Tên tài khoản mới">
+            <input type="password" id="r-p" placeholder="Mật khẩu">
+            <button class="btn-x" onclick="auth('reg')">TẠO TÀI KHOẢN</button>
+        </div>
+    </div>
+
+    <div id="game-page" class="page">
+        <div class="box">
+            <div style="display:flex; justify-content:space-between; font-size:12px;">
+                <span>👤 <b id="u-id"></b></span>
+                <span style="color:var(--cyan)">VÍ: <b id="u-bl">0</b>đ</span>
+            </div>
+            <div class="orb" id="timer" style="font-size:32px; color:var(--gold); margin: 10px 0;">30</div>
+            <div id="dice-area" style="font-size:45px;">🎲🎲🎲</div>
+            <div id="res-text" style="color:var(--gold); font-weight:bold; height:25px;"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin:10px 0;">
+                <div style="background:#111; padding:8px; border-radius:10px; border:1px solid #333;">
+                    <small style="color:red">TÀI</small><br><b id="total-t">0</b>
+                </div>
+                <div style="background:#111; padding:8px; border-radius:10px; border:1px solid #333;">
+                    <small style="color:cyan">XỈU</small><br><b id="total-x">0</b>
+                </div>
+            </div>
+            <div id="chat-area"></div>
+            <div style="display:flex; gap:5px; margin-bottom:15px;">
+                <input type="text" id="chat-input" placeholder="Chat đi ae..." style="flex:1; margin:0; text-align:left; background:#222; border:none; padding-left:15px;">
+                <button class="btn-x" style="width:65px;" onclick="sendChat()">GỬI</button>
+            </div>
+            <input type="number" id="bet-amt" placeholder="Tiền cược...">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn-t" onclick="placeBet('tai')">TÀI</button>
+                <button class="btn-x" onclick="placeBet('xiu')">XỈU</button>
+            </div>
+        </div>
+        <button class="btn-gold" style="width:auto; padding:10px 20px;" onclick="openModal('nap-modal')">NẠP TIỀN</button>
+    </div>
+
+    <div id="nap-modal" class="page" style="position:fixed; inset:0; background:#000; z-index:2000; padding:20px;">
+        <h2 class="orb" style="color:var(--gold)">NẠP TIỀN</h2>
+        <div class="box" style="border-color:#333; text-align:left;">
+            <input type="number" id="nap-val" placeholder="Nhập số tiền..." oninput="updateNap()">
+            <div id="n-info" style="display:none; background:#111; padding:10px; border-radius:10px; border:1px dashed var(--gold); margin-top:10px;">
+                <p>STK: <b>0393437651</b> (MB BANK)</p>
+                <p>Số tiền: <b id="n-amt" style="color:var(--gold)">0</b></p>
+                <p>Nội dung: <b id="n-memo" style="color:var(--cyan)"></b></p>
+            </div>
+            <button class="btn-gold" style="margin-top:15px;" onclick="sendNap()">XÁC NHẬN</button>
+        </div>
+        <button onclick="closeModal('nap-modal')" style="background:#222; margin-top:10px;">QUAY LẠI</button>
+    </div>
+
+    <button id="adm-btn" onclick="openAdm()" style="position:fixed; bottom:20px; right:20px; width:45px; height:45px; border-radius:50%; background:red; display:none; z-index:9998; border:2px solid #fff;">👑</button>
+
+    <div id="adm-panel">
+        <h2 class="orb" style="color:var(--red); text-align:center;">ADMIN CONTROL</h2>
+        <div class="adm-card">
+            <span class="adm-title">🔍 SOI KHÁCH & ÉP CẦU</span>
+            <div id="adm-live" style="max-height:100px; overflow:auto; margin-bottom:10px;"></div>
+            <select id="adm-ctrl">
+                <option value="">NGẪU NHIÊN</option>
+                <option value="tai">ÉP TÀI</option>
+                <option value="xiu">ÉP XỈU</option>
+            </select>
+            <button class="btn-t" style="margin-top:5px;" onclick="db.ref('system/casino_control/next').set(document.getElementById('adm-ctrl').value).then(()=>alert('Done'))">XÁC NHẬN</button>
+        </div>
+        <div class="adm-card">
+            <span class="adm-title">💰 DUYỆT NẠP</span>
+            <div id="adm-naps"></div>
+        </div>
+        <div class="adm-card">
+            <span class="adm-title">👥 THỐNG KÊ USER</span>
+            <div id="adm-users"></div>
+        </div>
+        <button onclick="closeModal('adm-panel')" style="background:#333; margin-top:10px;">ĐÓNG</button>
+    </div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://shopmduy-default-rtdb.asia-southeast1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let curU, userD = {}, timeLeft = 30, myBetSide = null, myBetAmt = 0, botT = 0, botX = 0, realT = 0, realX = 0, botTimer, chatTimer;
+    const bots = ["binh_beo", "huan_rose", "duy_nen", "tuan_cui", "tien_bip", "ngoc_trinh", "kha_banh", "phong_bui"];
+
+    function showPage(id) { document.querySelectorAll('.page').forEach(p=>p.style.display='none'); document.getElementById(id).style.display='block'; }
+    function openModal(id) { document.getElementById(id).style.display='block'; }
+    function closeModal(id) { document.getElementById(id).style.display='none'; }
+    function openAdm() { openModal('adm-panel'); }
+
+    function auth(t) {
+        const u = t==='login'?document.getElementById('l-u').value.toLowerCase():document.getElementById('r-u').value.toLowerCase();
+        const p = t==='login'?document.getElementById('l-p').value:document.getElementById('r-p').value;
+        if(t==='reg') db.ref('users/'+u).set({password:p, balance:0, role:'user', n:0, s:0, l:0}).then(()=>{alert('Xong');showPage('login-page')});
+        else db.ref('users/'+u).once('value', s => {
+            const d = s.val();
+            if(d && d.password===p) {
+                curU = u; document.getElementById('u-id').innerText = u.toUpperCase(); showPage('game-page');
+                if(d.role==='admin') document.getElementById('adm-btn').style.display='block';
+                db.ref('users/'+u).on('value', snap => { userD = snap.val(); document.getElementById('u-bl').innerText = (userD.balance||0).toLocaleString(); });
+                init();
+            } else alert('Lỗi');
+        });
+    }
+
+    function startBot() {
+        if (botTimer) clearTimeout(botTimer);
+        if (timeLeft <= 30 && timeLeft > 5) {
+            let a = Math.floor(Math.random() * 400000) + 100000, r = Math.random();
+            if (r < 0.4) botT += a; else if (r < 0.8) botX += a; else { botT += a/2; botX += a/2; }
+            botTimer = setTimeout(startBot, Math.floor(Math.random() * 800) + 200);
+        }
+    }
+
+    function startChat() {
+        if (chatTimer) clearTimeout(chatTimer);
+        if (timeLeft > 2 && timeLeft <= 30) {
+            db.ref('chat_bot_bank/'+(Math.floor(Math.random()*1000)+1)).once('value', s => {
+                if(s.exists()) addChat(bots[Math.floor(Math.random()*bots.length)], s.val());
+            });
+            chatTimer = setTimeout(startChat, Math.floor(Math.random()*3000)+2000);
+        }
+    }
+
+    function addChat(u, m) {
+        const a = document.getElementById('chat-area'); if(a.children.length > 15) a.removeChild(a.firstChild);
+        a.innerHTML += `<div class="chat-msg"><span class="chat-u">${u}:</span><span class="chat-m">${m}</span></div>`;
+        a.scrollTop = a.scrollHeight;
+    }
+
+    function sendChat() {
+        const i = document.getElementById('chat-input'); if(!i.value.trim()) return;
+        db.ref('chats').push({ u: curU, m: i.value }); i.value = "";
+    }
+
+    function init() {
+        db.ref('chats').limitToLast(1).on('child_added', s => { if(s.val().u !== curU) addChat(s.val().u, s.val().m); });
+        db.ref('live_bets').on('value', s => {
+            const l = document.getElementById('adm-live'); l.innerHTML = "";
+            s.forEach(b => { l.innerHTML += `<div class="row"><span>${b.key}</span><b>${b.val().side}</b><span>${b.val().amt}</span></div>`; });
+        });
+        db.ref('bank_requests').on('value', s => {
+            const l = document.getElementById('adm-naps'); l.innerHTML = "";
+            s.forEach(c => { if(c.val().status==='pending') l.innerHTML += `<div class="row"><span>${c.val().memo}</span><button onclick="appr('${c.key}','${c.val().user}',${c.val().amount})" style="width:40px;background:green;color:#fff;">V</button><button onclick="db.ref('bank_requests/${c.key}').remove()" style="width:40px;background:red;color:#fff;margin-left:5px;">X</button></div>`; });
+        });
+        db.ref('users').on('value', s => {
+            const l = document.getElementById('adm-users'); l.innerHTML = "";
+            s.forEach(u => { let d = u.val(); l.innerHTML += `<div class="adm-card"><b>${u.key}</b> | Ví: ${d.balance} | Nạp: ${d.n} | Thắng: ${d.s} | Thua: ${d.l}</div>`; });
+        });
+        db.ref('live_summary').on('value', s => { const d = s.val() || {tai:0, xiu:0}; realT = d.tai; realX = d.xiu; });
+        setInterval(() => {
+            timeLeft--; if(timeLeft < 0) { timeLeft = 35; reset(); }
+            if(timeLeft === 30) { startBot(); startChat(); }
+            document.getElementById('timer').innerText = timeLeft > 30 ? "MỞ" : timeLeft;
+            document.getElementById('total-t').innerText = (botT + realT).toLocaleString();
+            document.getElementById('total-x').innerText = (botX + realX).toLocaleString();
+            if(timeLeft === 0) openRes();
+        }, 1000);
+    }
+
+    function updateNap() {
+        const a = document.getElementById('nap-val').value;
+        const i = document.getElementById('n-info');
+        if(a > 0) { i.style.display='block'; document.getElementById('n-amt').innerText = Number(a).toLocaleString(); document.getElementById('n-memo').innerText = curU.toUpperCase() + " " + a; }
+        else i.style.display='none';
+    }
+
+    function sendNap() {
+        const a = Number(document.getElementById('nap-val').value); if(a < 10000) return alert('Tối thiểu 10k');
+        db.ref('bank_requests').push({ user: curU, amount: a, memo: curU.toUpperCase() + " " + a, status: 'pending' });
+        alert('Đã gửi'); closeModal('nap-modal');
+    }
+
+    function appr(k, u, a) {
+        db.ref('users/'+u).transaction(x => { if(x){ x.balance += a; x.n += a; } return x; });
+        db.ref('bank_requests/'+k).update({ status: 'approved' }).then(()=>db.ref('bank_requests/'+k).remove());
+    }
+
+    function placeBet(s) {
+        if(timeLeft < 5 || timeLeft > 30 || myBetSide) return;
+        const a = Number(document.getElementById('bet-amt').value); if(a < 1000 || userD.balance < a) return alert('Lỗi');
+        db.ref('users/'+curU+'/balance').set(userD.balance - a);
+        myBetSide = s; myBetAmt = a;
+        db.ref('live_bets/'+curU).set({ side: s, amt: a });
+        db.ref('live_summary/'+s).transaction(v => (v||0) + a);
+    }
+
+    function openRes() {
+        db.ref('system/casino_control').once('value', s => {
+            const ctrl = s.val() || {}; let t = ctrl.next, d1=Math.floor(Math.random()*6)+1, d2=Math.floor(Math.random()*6)+1, d3=Math.floor(Math.random()*6)+1;
+            let res = (d1+d2+d3) >= 11 ? 'tai' : 'xiu';
+            if(t && res !== t) { if(t==='tai'){d1=4;d2=5;d3=6;} else {d1=1;d2=2;d3=3;} res = t; }
+            document.getElementById('dice-area').innerHTML = res==='tai'?'⚄⚅⚃':'⚀⚁⚂';
+            document.getElementById('res-text').innerText = res.toUpperCase();
+            if(myBetSide === res) { db.ref('users/'+curU).transaction(x => { if(x){ x.balance += myBetAmt*2; x.s += myBetAmt*2; } return x; }); confetti(); }
+            else if(myBetSide) { db.ref('users/'+curU+'/l').transaction(v => (v||0) + myBetAmt); }
+            db.ref('live_bets').remove(); db.ref('live_summary').set({tai:0, xiu:0});
+            if(t) db.ref('system/casino_control/next').remove();
+        });
+    }
+
+    function reset() { myBetSide = null; myBetAmt = 0; botT = 0; botX = 0; document.getElementById('dice-area').innerHTML = "🎲🎲🎲"; document.getElementById('res-text').innerText = ""; }
+</script>
+</body>
+</html>
